@@ -1,30 +1,31 @@
-var express = require('express');
-var https = require('https');
-var http = require('http');
-var fs = require('fs');
+var http = require('http'),
+fs = require('fs'),
+// NEVER use a Sync function except at start-up!
+index = fs.readFileSync(__dirname + '/index.html');
 
-
-// This line is from the Node.js HTTPS documentation.
-var options = {
-  key: fs.readFileSync('/opt/bitnami/apache2/conf/server.key'),
-  cert: fs.readFileSync('nodecert.crt')
-};
-
-// Create a service (the app object is just a callback).
-var app = express();
-
-
-// Create an HTTPS service identical to the HTTP service.
-https.createServer(options, app).listen(3000);
-var io = require('socket.io')(https);
-
-app.get('/', function(req,res){
-
-        res.send("hi");
+// Send index.html to all requests
+var app = http.createServer(function(req, res) {
+res.writeHead(200, {'Content-Type': 'text/html'});
+res.end(index);
 });
 
-io.on('connection',function (socket){
-		socket.emit('message', {hi:'there'});
-		socket.on('message',function (data){console.log(data); });
+// Socket.io server listens to our app
+var io = require('socket.io').listen(app);
+
+// Send current time to all connected clients
+function sendTime() {
+io.emit('time', { time: new Date().toJSON() });
+}
+
+// Send current time every 10 secs
+setInterval(sendTime, 10000);
+
+// Emit welcome message on connection
+io.on('connection', function(socket) {
+// Use socket to communicate with this particular client only, sending it it's own id
+socket.emit('welcome', { message: 'Welcome!', id: socket.id });
+
+socket.on('i am client', console.log);
 });
 
+app.listen(3000);
