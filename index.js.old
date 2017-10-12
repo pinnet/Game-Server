@@ -1,0 +1,29 @@
+var fs = require('fs');
+
+var options = {
+  key: fs.readFileSync('/opt/bitnami/apache2/conf/server.key'),
+  cert: fs.readFileSync('/opt/bitnami/apache2/conf/server.crt'),
+  ca: fs.readFileSync('/opt/bitnami/apache2/conf/server-ca.crt')
+};
+
+var app = require('https').createServer(options);
+var server = require('express')(app);
+var io = require('socket.io')(app);
+
+app.listen(3000);
+
+server.get('/', function (req, res) {
+    res.send('ack2 "/" ');
+
+});
+
+io.on('connection', function (socket) {
+    socket.emit('message', { hello: 'world' });
+    socket.on('message', function (data) {
+        console.log(data);
+    });
+
+});
+
+console.log('----------------- Listen');
+
